@@ -1,5 +1,5 @@
 node_modules/
 .vscode/
-undefined/
+filestore/
 out.js
 config.json 
