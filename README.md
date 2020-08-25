@@ -25,3 +25,9 @@ $ node test
     for Alice on Mumbai and Goerli; for Bob on Mumbai and Goerli
 2. Deposits amount specified in config from Alice on to her channel on Mumbai
 3. Withdraws from Alice's channel on Goerli
+
+
+### Notes
+
+1. Channel = (user address + network)
+2. 1:1 mapping exists between key and channel => a single user cannot have two channels on the same node with different networks
