@@ -10,9 +10,12 @@ Node hosted at: `https://indra-mumbai.matic.today`
 ```json
 {
   "alice": "PRIVATE_KEY",
-  "bob": "PRIVATE_KEY",
+  "parentChain": "https://goerli.infura.io/v3/9b2d88cc1db243a1acf9819af5f4302d",
+  "parentChainId": 5,
+  "childChain": "https://rpc-mumbai.matic.today",
   "amountInWei": "1000"
 }
+
 ```
 
 ### Instantiating a Channel
