@@ -1,7 +1,7 @@
 const { connect } = require('@connext/client')
 const { getFileStore } = require('@connext/store')
 const { Wallet, utils } = require('ethers')
-const { alice, childChain, parentChain } = require('./config.json')
+const { alice, childChain, parentChain, indraNodeUrl } = require('./config.json')
 
 /**
  * returns connection parameters for the `connect` function, to instantiate a channel
@@ -13,7 +13,7 @@ function getConnectionParams (rpc, pvtKey) {
   return ({
     ethProviderUrl: rpc,
     signer: new Wallet(pvtKey).privateKey,
-    nodeUrl: "https://indra-mumbai.matic.today",
+    nodeUrl: indraNodeUrl,
     store: getFileStore(),
     logLevel: 1
   })
