@@ -25,10 +25,12 @@ run:
 ```bash
 $ node test
 ```
-1. Creates 4 channels
-    for Alice on Mumbai and Goerli; for Bob on Mumbai and Goerli
-2. Deposits amount specified in config from Alice on to her channel on Mumbai
-3. Withdraws from Alice's channel on Goerli
+1. Creates 2 channels
+    An ephemeral channel for Alice on Mumbai (E,M) and a channel for Alice on Goerli (A,G)
+2. Transfers some amount to ephemeral account from Alice's account on Mumbai A -> E
+3. Deposits amount specified in config from Ephemeral channel on Mumbai E -> (E,M)
+4. Transfers from ephemeral channel to alice's channel on goerli (E,M) -> (A,G)
+5. Withdraws from Alice's channel on Goerli (A,G) -> A
 
 
 ### Notes
