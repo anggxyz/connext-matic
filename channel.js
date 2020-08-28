@@ -1,45 +1,55 @@
 const { connect } = require('@connext/client')
 const { getFileStore } = require('@connext/store')
-const { Wallet } = require('ethers')
-const { alice, bob } = require('./config.json')
+const { Wallet, utils } = require('ethers')
+const { alice, childChain, parentChain } = require('./config.json')
 
-function getConnectionParams (
-  rpc, 
-  pvtKey
-  ) {
+/**
+ * returns connection parameters for the `connect` function, to instantiate a channel
+ * @param {string} rpc rpc of the blockchain network 
+ * @param {string} pvtKey private key of the user
+ * 
+ */
+function getConnectionParams (rpc, pvtKey) {
   return ({
     ethProviderUrl: rpc,
     signer: new Wallet(pvtKey).privateKey,
     nodeUrl: "https://indra-mumbai.matic.today",
     store: getFileStore(),
-    logLevel: 3
+    logLevel: 1
   })
 }
 
+/**
+ * Create and connect to channels
+ * Returns two channels, channels[0] is the ephemeral channel created deterministically from the given private key (params) connected to Mumbai
+ * and channels[1] is the channel for the given user connected to Goerli
+ */
 async function connectToChannels() {
-  const aliceMumbaiParams = getConnectionParams(
-    'https://rpc-mumbai.matic.today',
-    alice
+  let wallet = new Wallet(alice)
+
+  let signedMessage = await wallet.signMessage('Initiating connext fast withdraw')
+  let hashedMessage = await utils.hashMessage(signedMessage)
+  let nodeFromSeed = utils.HDNode.fromSeed(hashedMessage)
+  let ephemeralWallet = new Wallet(nodeFromSeed.privateKey)
+
+  const ephemeralMumbaiParams = getConnectionParams(
+    childChain,
+    ephemeralWallet.privateKey
   )
   const aliceGoerliParams = getConnectionParams(
-    'https://goerli.infura.io/v3/9b2d88cc1db243a1acf9819af5f4302d',
+    parentChain,
     alice
   )
-  // const bobGoerliParams = getConnectionParams(
-  //   'https://goerli.infura.io/v3/9b2d88cc1db243a1acf9819af5f4302d',
-  //   bob
-  // )
-  // const bobMumbaiParams = getConnectionParams(
-  //   'https://rpc-mumbai.matic.today',
-  //   bob
-  // )
-  return await Promise.all ([
-    // connect(aliceMumbaiParams), 
-    connect(aliceGoerliParams),
-    // connect(bobGoerliParams),
-    // connect(bobMumbaiParams)
+  let _channels = await Promise.all ([
+    connect(ephemeralMumbaiParams), 
+    connect(aliceGoerliParams)
   ])
+  return { channels: _channels }
 }
+
+/**
+ * Export connectToChannels function
+ */
 
 module.exports = {
   connectToChannels

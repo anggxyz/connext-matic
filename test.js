@@ -1,10 +1,9 @@
-/**
- * Alice deposits some funds on her channel on Mumbai's node
- * Makes a simple end-to-end transfer from one user’s balance to another
- */
 const { connectToChannels } = require('./channel.js')
-const { alice, bob, amountInWei } = require('./config.json')
+const { amountInWei, childChain, parentChain, parentChainId } = require('./config.json')
 const { Wallet, providers, utils } = require('ethers')
+
+const mumbaiProvider = new providers.JsonRpcProvider (childChain)
+const goerliProvider = new providers.JsonRpcProvider (parentChain)
 
 // add delay
 function wait (delayms) {
@@ -13,7 +12,12 @@ function wait (delayms) {
   })
 }
 
-// display balance on node and chains
+/**
+ * Displays
+ * public identifier, free balance of the user on the channel, on Mumbai network and on Goerli network
+ * @param {string} pvtKey private key of the channel participant
+ * @param {Channel} channel the channel on which to query for the balance
+ */
 async function getBalances(pvtKey, channel) {
   let wallet = new Wallet(pvtKey)
   console.log ('---\ndisplaying balances for:', wallet.address, '\n---')
@@ -21,12 +25,10 @@ async function getBalances(pvtKey, channel) {
   let freeBalance = await channel.getFreeBalance()
   if (freeBalance[wallet.address]) {
     console.log (
-      'Node:', 
+      'free balance:', 
       utils.formatEther(freeBalance[wallet.address])
     )
   }
-  let mumbaiProvider = new providers.JsonRpcProvider ('https://rpc-mumbai.matic.today')
-  let goerliProvider = new providers.JsonRpcProvider ('https://goerli.infura.io/v3/f3ffe28620114fd2bd00c5a3ebe55558')
   let onMumbai = wallet.connect(mumbaiProvider)
   let onGoerli = wallet.connect(goerliProvider)
   let balanceOnMumbai = await onMumbai.getBalance()
@@ -43,66 +45,105 @@ async function getBalances(pvtKey, channel) {
 }
 
 async function main () {
-
   // instantiate channel
   console.log ('connecting to channels...')
-  let c = await connectToChannels ()
-  let aliceChannel = {
-    mumbai: c[0], // channel
-    // goerli: c[1],
-    address: c[0].signerAddress // adderss
+  let c = await connectToChannels()
+  let ephemeralChannel = {
+    mumbai: c.channels[0],
+    address: c.channels[0].signerAddress,
+    pvtKey: c.channels[0].signer.privateKey
   }
-  // let bobChannel = {
-  //   goerli: c[2], // channel
-  //   mumbai: c[3],
-  //   address: c[2].signerAddress // address
-  // }
-  console.log ('✨ channels instantiated!')
-  
+  let aliceChannel = {
+    goerli: c.channels[1],
+    address: c.channels[1].signerAddress,
+    pvtKey: c.channels[1].signer.privateKey
+  }
+  console.log (
+    '\nsigner1 (ephemeral on mumbai):',ephemeralChannel.address,
+    '\nsigner1 private key:', ephemeralChannel.pvtKey,
+    '\nsigner2 (alice on goerli):', aliceChannel.address,
+    '\nsigner2 private key:', aliceChannel.pvtKey
+  )
+  console.log ('\n✨ channels instantiated!')
+
   // display balances
-  // console.log ('\n---balances---\n')
-  // console.log (`Alice's channel on Mumbai`)
-  // await getBalances (alice, aliceChannel.mumbai)
-  // console.log (`Alice's channel on Goerli`)
-  // await getBalances (alice, aliceChannel.goerli)
-  
-  // // deposit to channel
-  // // console.log ('---depositing---\n')
-  // const payload = {
-  //   amount: amountInWei, // in Wei
-  //   assetId: "0x0000000000000000000000000000000000000000", // represents ETH
-  // }
-  // console.log ('depositing', utils.formatEther(payload.amount), 'from Alice on Mumbai')
-  // let d = await aliceChannel.mumbai.deposit(payload)
-  // console.log ('deposit result =>', d.transaction.hash)  
-  // console.log ('---\n')
+  console.log ('\n---balances---')
+  console.log (`Alice's ephemeral channel on Mumbai`)
+  await getBalances (ephemeralChannel.pvtKey, ephemeralChannel.mumbai)
+  console.log (`Alice's channel on Goerli`)
+  await getBalances (aliceChannel.pvtKey, aliceChannel.goerli)
 
-  // // display balances
-  // await wait(7000) // wait 5 sec for the balances to update
-  // console.log ('\n---balances---\n')
-  // console.log (`Alice's channel on Mumbai`)
-  // await getBalances (alice, aliceChannel.mumbai)
-  // console.log (`Alice's channel on Goerli`)
-  // await getBalances (alice, aliceChannel.goerli)
+  let _wallet = new Wallet(aliceChannel.pvtKey, mumbaiProvider)
+  // transferring to ephemeral account 
+  let tx = await _wallet.sendTransaction ({
+    to: ephemeralChannel.address,
+    value: utils.parseEther(utils.formatEther("5000")) // amount to withdraw
+  })
+  console.log ('sent:', tx.hash)
 
-  // // withdraw from mumbai
-  // console.log ('---withdrawing---\n')
-  // console.log ('withdrawing', utils.formatEther(payload.amount), 'from Alice onto Goerli')
-  // let w = await aliceChannel.goerli.withdraw({
-  //   amount: amountInWei,
-  //   assetId: "0x0000000000000000000000000000000000000000"
-  // })
+  // display balances
+  await wait(7000)
+  console.log ('\n---balances---')
+  console.log (`Alice's ephemeral channel on Mumbai`)
+  await getBalances (ephemeralChannel.pvtKey, ephemeralChannel.mumbai)
+  console.log (`Alice's channel on Goerli`)
+  await getBalances (aliceChannel.pvtKey, aliceChannel.goerli)
 
-  // console.log ('withdraw =>', w)
+  // deposit to channel
+  console.log ('\n---depositing---')
+  console.log ('depositing', utils.formatEther(amountInWei), 'from ephemeral account on Mumbai')
+  let d = await ephemeralChannel.mumbai.deposit({
+    amount: amountInWei, // in Wei
+    assetId: "0x0000000000000000000000000000000000000000", // represents ETH
+  })
+  console.log ('deposit result =>', d.transaction.hash)  
+  console.log ('---\n')
 
-  // // display balances
-  // await wait(7000) // wait 5 sec for the balances to update
-  // console.log ('\n---balances---\n')
-  // console.log (`Alice's channel on Mumbai`)
-  // await getBalances (alice, aliceChannel.mumbai)
-  // console.log (`Alice's channel on Goerli`)
-  // await getBalances (alice, aliceChannel.goerli)
+  await wait(7000) 
 
+  // display balances
+  console.log ('\n---balances---')
+  console.log (`Alice's ephemeral channel on Mumbai`)
+  await getBalances (ephemeralChannel.pvtKey, ephemeralChannel.mumbai)
+  console.log (`Alice's channel on Goerli`)
+  await getBalances (aliceChannel.pvtKey, aliceChannel.goerli)
+
+  // transfer to alice's channel on goerli
+  console.log ('\n---transfering---')
+  const t = await ephemeralChannel.mumbai.transfer({
+    recipient: aliceChannel.goerli.publicIdentifier,
+    amount: amountInWei,
+    assetId: "0x0000000000000000000000000000000000000000",
+    meta: {
+      receiverChainId: parentChainId
+    }
+  })
+  console.log ('transfer completed for', utils.formatEther(t.amount), 'for asset', t.assetId, ', payment id:', t.meta.paymentId)
+
+  // display balances
+  await wait(20000)  // wait 10 sec
+  console.log ('\n---balances---')
+  console.log (`Alice's ephemeral channel on Mumbai`)
+  await getBalances (ephemeralChannel.pvtKey, ephemeralChannel.mumbai)
+  console.log (`Alice's channel on Goerli`)
+  await getBalances (aliceChannel.pvtKey, aliceChannel.goerli)
+
+  // withdraw from mumbai
+  console.log ('---withdrawing---\n')
+  console.log ('withdrawing', utils.formatEther(amountInWei), 'from Alice onto Goerli')
+  let w = await aliceChannel.goerli.withdraw ({
+    recipient: "0xF2Adfa02443396583A8da231ca50Faf63eC2AFd3",
+    amount: amountInWei,
+    assetId: "0x0000000000000000000000000000000000000000"
+  })
+  console.log ('withdraw =>', w.transaction.hash)
+
+  await wait(7000) 
+  console.log ('\n---balances---')
+  console.log (`Alice's ephemeral channel on Mumbai`)
+  await getBalances (ephemeralChannel.pvtKey, ephemeralChannel.mumbai)
+  console.log (`Alice's channel on Goerli`)
+  await getBalances (aliceChannel.pvtKey, aliceChannel.goerli)
 }
 
 main ()
