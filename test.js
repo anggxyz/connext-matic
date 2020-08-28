@@ -132,7 +132,6 @@ async function main () {
   console.log ('---withdrawing---\n')
   console.log ('withdrawing', utils.formatEther(amountInWei), 'from Alice onto Goerli')
   let w = await aliceChannel.goerli.withdraw ({
-    recipient: "0xF2Adfa02443396583A8da231ca50Faf63eC2AFd3",
     amount: amountInWei,
     assetId: "0x0000000000000000000000000000000000000000"
   })
